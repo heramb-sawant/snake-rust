@@ -1,4 +1,15 @@
+use rand::{thread_rng, Rng};
 use std::fmt::{Display, Formatter, Result};
+
+/*
+    TODO:
+        - Randomly generate monsters on the board
+        - Get display using termion or crossterm
+        - Get movements working
+        - A few tests
+
+        - See if you can get GH tests pipeline working
+*/
 
 #[derive(Clone)]
 enum Tile {
@@ -50,6 +61,11 @@ impl Grid {
         empty_grid[1][1] = Tile::Player;
         empty_grid[columns - 2][rows - 2] = Tile::Exit;
 
+        let enemy_column: usize = thread_rng().gen_range(2..19);
+        let enemy_row: usize = thread_rng().gen_range(2..19);
+
+        empty_grid[enemy_column][enemy_row] = Tile::Enemy;
+
         return Grid {
             tiles: empty_grid,
             columns,
@@ -70,7 +86,8 @@ impl Grid {
 fn main() {
     println!("Starting!");
 
-    let grid = Grid::new(20, 20);
+    let length = 20;
+    let grid = Grid::new(length, length);
 
     grid.print();
 }
