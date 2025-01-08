@@ -1,8 +1,8 @@
 use rand::{thread_rng, Rng};
+use termion::clear;
 use termion::event::Key;
 use termion::input::{Keys, TermRead};
 use termion::raw::{IntoRawMode, RawTerminal};
-use termion::{clear, color, cursor, style};
 
 use std::io::{stdin, stdout, Stdin, Stdout, Write};
 
@@ -74,10 +74,14 @@ impl Grid {
             i += 1;
         }
 
+        // Add Player
         let player_coordinate = (1, 1);
         empty_grid[1][1] = Tile::Player;
+
+        // Add Exit
         empty_grid[columns - 2][rows - 2] = Tile::Exit;
 
+        // Add Enemy
         let enemy_column: usize = thread_rng().gen_range(2..18);
         let enemy_row: usize = thread_rng().gen_range(2..18);
 
@@ -148,20 +152,20 @@ impl Grid {
     }
 
     fn move_player(&mut self, direction: Direction) {
-        let player_coordinate = self.player_coordinate;
+        let old_coordinate = self.player_coordinate;
 
         let new_coordinate = match direction {
-            Direction::Right => (player_coordinate.0 + 1, player_coordinate.1),
-            Direction::Left => (player_coordinate.0 - 1, player_coordinate.1),
-            Direction::Up => (player_coordinate.0, player_coordinate.1 - 1),
-            Direction::Down => (player_coordinate.0, player_coordinate.1 + 1),
+            Direction::Right => (old_coordinate.0 + 1, old_coordinate.1),
+            Direction::Left => (old_coordinate.0 - 1, old_coordinate.1),
+            Direction::Up => (old_coordinate.0, old_coordinate.1 - 1),
+            Direction::Down => (old_coordinate.0, old_coordinate.1 + 1),
         };
 
         writeln!(
             self.stdout,
             "{}Old {:?}, New {:?}",
             termion::cursor::Goto(0, 24),
-            player_coordinate,
+            old_coordinate,
             new_coordinate
         )
         .unwrap();
@@ -170,13 +174,14 @@ impl Grid {
         write!(
             self.stdout,
             "{}P",
-            termion::cursor::Goto(new_coordinate.0 as u16, new_coordinate.1 as u16), // TODO: Find a better way around this cast
+            termion::cursor::Goto(new_coordinate.0 as u16 + 1, new_coordinate.1 as u16 + 1), // TODO: Find a better way around this cast
         )
         .unwrap();
         write!(
             self.stdout,
-            "{} ",
-            termion::cursor::Goto(player_coordinate.0 as u16, player_coordinate.1 as u16), // TODO: Find a better way around this cast
+            "{} {}",
+            termion::cursor::Goto(old_coordinate.0 as u16 + 1, old_coordinate.1 as u16 + 1), // TODO: Find a better way around this cast
+            termion::cursor::Hide
         )
         .unwrap();
 
@@ -187,7 +192,7 @@ impl Grid {
     fn print(&mut self) {
         // TODO: Update all the tiles to have a coordinate so its easier to reference and print them at a specific position
         let mut i = 1;
-        for columns in self.tiles.iter().rev() {
+        for columns in self.tiles.iter() {
             write!(self.stdout, "{}", termion::cursor::Goto(0, i)).unwrap();
             i += 1;
             for row in columns.iter() {
