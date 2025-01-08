@@ -19,20 +19,18 @@ use std::io::{stdin, stdout, Stdin, Stdout, Write};
 #[derive(Clone)]
 enum Tile {
     Empty,
-    Player,
-    Enemy,
+    Snake,
+    Food,
     Wall,
-    Exit,
 }
 
 impl Tile {
     fn get_character(&self) -> char {
         match self {
             Tile::Empty => ' ',
-            Tile::Player => 'P',
-            Tile::Enemy => 'E',
+            Tile::Snake => 'S',
+            Tile::Food => 'E',
             Tile::Wall => '+',
-            Tile::Exit => 'O',
         }
     }
 }
@@ -50,6 +48,7 @@ struct Grid {
     rows: usize,
     // TODO: move this to the tiles as well. Update this with a player tile once coordinate is on the player
     player_coordinate: (usize, usize),
+    score: i16,
     stdout: RawTerminal<Stdout>,
     stdin: Keys<Stdin>,
 }
@@ -76,22 +75,20 @@ impl Grid {
 
         // Add Player
         let player_coordinate = (1, 1);
-        empty_grid[1][1] = Tile::Player;
+        empty_grid[1][1] = Tile::Snake;
 
-        // Add Exit
-        empty_grid[columns - 2][rows - 2] = Tile::Exit;
+        // Add Food
+        let food_column: usize = thread_rng().gen_range(2..18);
+        let food_row: usize = thread_rng().gen_range(2..18);
 
-        // Add Enemy
-        let enemy_column: usize = thread_rng().gen_range(2..18);
-        let enemy_row: usize = thread_rng().gen_range(2..18);
-
-        empty_grid[enemy_column][enemy_row] = Tile::Enemy;
+        empty_grid[food_column][food_row] = Tile::Food;
 
         return Grid {
             tiles: empty_grid,
             columns,
             player_coordinate,
             rows,
+            score: 0,
             stdout,
             stdin: stdin.keys(),
         };
@@ -170,20 +167,28 @@ impl Grid {
         )
         .unwrap();
 
-        // TODO: Use the actual tile character instead of hard coding it
         write!(
             self.stdout,
-            "{}P",
+            "{}{}",
             termion::cursor::Goto(new_coordinate.0 as u16 + 1, new_coordinate.1 as u16 + 1), // TODO: Find a better way around this cast
+            Tile::Snake.get_character()
         )
         .unwrap();
         write!(
             self.stdout,
-            "{} {}",
+            "{}{}{}",
             termion::cursor::Goto(old_coordinate.0 as u16 + 1, old_coordinate.1 as u16 + 1), // TODO: Find a better way around this cast
+            Tile::Empty.get_character(),
             termion::cursor::Hide
         )
         .unwrap();
+
+        match self.tiles[new_coordinate.0][new_coordinate.1] {
+            Tile::Food => {
+                self.score += 1;
+            }
+            _ => {}
+        }
 
         self.player_coordinate = new_coordinate;
     }
