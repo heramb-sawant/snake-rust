@@ -37,10 +37,19 @@ impl Tile {
     }
 }
 
+pub enum Direction {
+    Up,
+    Down,
+    Left,
+    Right,
+}
+
 struct Grid {
     tiles: Vec<Vec<Tile>>,
     columns: usize,
     rows: usize,
+    // TODO: move this to the tiles as well. Update this with a player tile once coordinate is on the player
+    player_coordinate: (usize, usize),
     stdout: RawTerminal<Stdout>,
     stdin: Keys<Stdin>,
 }
@@ -65,6 +74,7 @@ impl Grid {
             i += 1;
         }
 
+        let player_coordinate = (1, 1);
         empty_grid[1][1] = Tile::Player;
         empty_grid[columns - 2][rows - 2] = Tile::Exit;
 
@@ -76,6 +86,7 @@ impl Grid {
         return Grid {
             tiles: empty_grid,
             columns,
+            player_coordinate,
             rows,
             stdout,
             stdin: stdin.keys(),
@@ -89,11 +100,10 @@ impl Grid {
 
         self.print();
 
-        write!(
+        writeln!(
             self.stdout,
-            "{}Arrow keys to move, q to exit.{}",
+            "{}Arrow keys to move, q to exit.",
             termion::cursor::Goto(0, 21),
-            termion::cursor::Hide
         )
         .unwrap();
 
@@ -111,19 +121,66 @@ impl Grid {
             match c {
                 // Exit.
                 Key::Char('q') => break,
-                Key::Left => println!("<left>"),
-                Key::Right => println!("<right>"),
-                Key::Up => println!("<up>"),
-                Key::Down => println!("<down>"),
+                Key::Left => {
+                    println!("<left>");
+                    self.move_player(Direction::Left)
+                }
+                Key::Right => {
+                    println!("<right>");
+                    self.move_player(Direction::Right);
+                }
+                Key::Up => {
+                    println!("<up>");
+                    self.move_player(Direction::Up);
+                }
+                Key::Down => {
+                    println!("<down>");
+                    self.move_player(Direction::Down);
+                }
                 _ => println!("Invalid Move"),
             }
 
-            // Flush again.
             self.stdout.flush().unwrap();
         }
 
         // Show the cursor again before we exit.
         write!(self.stdout, "{}", termion::cursor::Show).unwrap();
+    }
+
+    fn move_player(&mut self, direction: Direction) {
+        let player_coordinate = self.player_coordinate;
+
+        let new_coordinate = match direction {
+            Direction::Right => (player_coordinate.0 + 1, player_coordinate.1),
+            Direction::Left => (player_coordinate.0 - 1, player_coordinate.1),
+            Direction::Up => (player_coordinate.0, player_coordinate.1 - 1),
+            Direction::Down => (player_coordinate.0, player_coordinate.1 + 1),
+        };
+
+        writeln!(
+            self.stdout,
+            "{}Old {:?}, New {:?}",
+            termion::cursor::Goto(0, 24),
+            player_coordinate,
+            new_coordinate
+        )
+        .unwrap();
+
+        // TODO: Use the actual tile character instead of hard coding it
+        write!(
+            self.stdout,
+            "{}P",
+            termion::cursor::Goto(new_coordinate.0 as u16, new_coordinate.1 as u16), // TODO: Find a better way around this cast
+        )
+        .unwrap();
+        write!(
+            self.stdout,
+            "{} ",
+            termion::cursor::Goto(player_coordinate.0 as u16, player_coordinate.1 as u16), // TODO: Find a better way around this cast
+        )
+        .unwrap();
+
+        self.player_coordinate = new_coordinate;
     }
 
     // TODO: get rid of this mut with pointers or whatever you saw in the tutorial.
