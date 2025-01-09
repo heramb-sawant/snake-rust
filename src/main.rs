@@ -83,12 +83,6 @@ impl Grid {
         let player_coordinate = (1, 1);
         empty_grid[1][1] = Tile::Snake;
 
-        // Add Food
-        let food_column: usize = thread_rng().gen_range(2..18);
-        let food_row: usize = thread_rng().gen_range(2..18);
-
-        empty_grid[food_column][food_row] = Tile::Food;
-
         return Grid {
             tiles: empty_grid,
             columns,
@@ -101,6 +95,9 @@ impl Grid {
     }
 
     fn start(&mut self) {
+        // Set up game
+        self.place_food();
+
         // TODO: This clears some of the warns I think. Make sure it starts after all the console start output
         write!(self.stdout, "{}", clear::All).unwrap();
         // self.stdout.flush().unwrap();
@@ -154,6 +151,13 @@ impl Grid {
         write!(self.stdout, "{}", termion::cursor::Show).unwrap();
     }
 
+    fn place_food(&mut self) {
+        let food_column: usize = thread_rng().gen_range(2..self.columns - 2);
+        let food_row: usize = thread_rng().gen_range(2..self.rows - 2);
+
+        self.tiles[food_column][food_row] = Tile::Food;
+    }
+
     fn move_player(&mut self, direction: Direction) {
         let old_coordinate = self.player_coordinate;
 
@@ -181,6 +185,7 @@ impl Grid {
         match self.tiles[new_coordinate.0][new_coordinate.1] {
             Tile::Food => {
                 self.score += 1;
+                self.place_food()
             }
             _ => {}
         }
