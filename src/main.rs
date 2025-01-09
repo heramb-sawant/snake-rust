@@ -158,13 +158,11 @@ impl Grid {
         let old_coordinate = self.player_coordinate;
 
         let new_coordinate = match direction {
-            Direction::Right => (old_coordinate.0 + 1, old_coordinate.1),
-            Direction::Left => (old_coordinate.0 - 1, old_coordinate.1),
-            Direction::Up => (old_coordinate.0, old_coordinate.1 - 1),
-            Direction::Down => (old_coordinate.0, old_coordinate.1 + 1),
+            Direction::Right => (old_coordinate.0, old_coordinate.1 + 1),
+            Direction::Left => (old_coordinate.0, old_coordinate.1 - 1),
+            Direction::Up => (old_coordinate.0 - 1, old_coordinate.1),
+            Direction::Down => (old_coordinate.0 + 1, old_coordinate.1),
         };
-
-        self.print();
 
         print!(
             "Tile: {},{},{}.",
@@ -190,6 +188,8 @@ impl Grid {
         self.player_coordinate = new_coordinate;
         self.tiles[old_coordinate.0][old_coordinate.1] = Tile::Empty;
         self.tiles[new_coordinate.0][new_coordinate.1] = Tile::Snake;
+
+        self.print();
 
         writeln!(
             self.stdout,
