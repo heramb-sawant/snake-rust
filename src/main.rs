@@ -8,9 +8,8 @@ use std::io::{stdin, stdout, Stdin, Stdout, Write};
 
 /*
     TODO:
-        - Randomly generate monsters on the board
-        - Get display using termion
-        - Get movements working
+        - Print the whole board every time
+        - Print the individual pieces once the board works as intended
         - A few tests
 
         - See if you can get GH tests pipeline working
@@ -158,30 +157,21 @@ impl Grid {
             Direction::Down => (old_coordinate.0, old_coordinate.1 + 1),
         };
 
-        writeln!(
-            self.stdout,
-            "{}Old {:?}, New {:?}",
-            termion::cursor::Goto(0, 24),
-            old_coordinate,
-            new_coordinate
-        )
-        .unwrap();
+        self.print();
 
-        write!(
-            self.stdout,
-            "{}{}",
-            termion::cursor::Goto(new_coordinate.0 as u16 + 1, new_coordinate.1 as u16 + 1), // TODO: Find a better way around this cast
-            Tile::Snake.get_character()
-        )
-        .unwrap();
-        write!(
-            self.stdout,
-            "{}{}{}",
-            termion::cursor::Goto(old_coordinate.0 as u16 + 1, old_coordinate.1 as u16 + 1), // TODO: Find a better way around this cast
-            Tile::Empty.get_character(),
-            termion::cursor::Hide
-        )
-        .unwrap();
+        print!(
+            "Tile: {},{},{}.",
+            new_coordinate.0,
+            new_coordinate.1,
+            self.tiles[new_coordinate.0][new_coordinate.1].get_character()
+        );
+
+        print!(
+            "Tile: {},{},{}.",
+            old_coordinate.0,
+            old_coordinate.1,
+            self.tiles[old_coordinate.0][old_coordinate.1].get_character()
+        );
 
         match self.tiles[new_coordinate.0][new_coordinate.1] {
             Tile::Food => {
@@ -191,6 +181,18 @@ impl Grid {
         }
 
         self.player_coordinate = new_coordinate;
+        self.tiles[old_coordinate.0][old_coordinate.1] = Tile::Empty;
+        self.tiles[new_coordinate.0][new_coordinate.1] = Tile::Snake;
+
+        writeln!(
+            self.stdout,
+            "{}Old {:?}, New {:?}, Score {}",
+            termion::cursor::Goto(0, 24),
+            old_coordinate,
+            new_coordinate,
+            self.score
+        )
+        .unwrap();
     }
 
     // TODO: get rid of this mut with pointers or whatever you saw in the tutorial.
