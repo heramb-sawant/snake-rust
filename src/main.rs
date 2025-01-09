@@ -10,6 +10,13 @@ use std::io::{stdin, stdout, Stdin, Stdout, Write};
     TODO:
         - Print the whole board every time
         - Print the individual pieces once the board works as intended
+        - Place the food randomly on the map
+        - Points increase everytime you get food
+        - Snake moves on its own
+        - Snake loses if it hits a border
+        - Snake increases in size everytime you get food
+        - Speed increases
+        - Food animation
         - A few tests
 
         - See if you can get GH tests pipeline working
