@@ -14,6 +14,7 @@ use std::io::{stdin, stdout, Stdin, Stdout, Write};
         - Snake increases in size everytime you get food
         - Speed increases
         - Food animation
+        - Start and end screen
         - A few tests
 
         - See if you can get GH tests pipeline working
@@ -50,7 +51,7 @@ struct Grid {
     columns: usize,
     rows: usize,
     // TODO: move this to the tiles as well. Update this with a player tile once coordinate is on the player
-    player_coordinate: (usize, usize),
+    snake_coordinate: (usize, usize),
     score: i16,
     stdout: RawTerminal<Stdout>,
     stdin: Keys<Stdin>,
@@ -76,14 +77,10 @@ impl Grid {
             i += 1;
         }
 
-        // Add Player
-        let player_coordinate = (1, 1);
-        empty_grid[1][1] = Tile::Snake;
-
         return Grid {
             tiles: empty_grid,
             columns,
-            player_coordinate,
+            snake_coordinate: (0, 0),
             rows,
             score: 0,
             stdout,
@@ -94,10 +91,10 @@ impl Grid {
     fn start(&mut self) {
         // Set up game
         self.place_food();
+        self.place_snake();
 
         // TODO: This clears some of the warns I think. Make sure it starts after all the console start output
         write!(self.stdout, "{}", clear::All).unwrap();
-        // self.stdout.flush().unwrap();
 
         self.print();
 
@@ -124,7 +121,7 @@ impl Grid {
                 Key::Char('q') => break,
                 Key::Left => {
                     println!("<left>");
-                    self.move_player(Direction::Left)
+                    self.move_player(Direction::Left);
                 }
                 Key::Right => {
                     println!("<right>");
@@ -141,6 +138,7 @@ impl Grid {
                 _ => println!("Invalid Move"),
             }
 
+            self.print();
             self.stdout.flush().unwrap();
         }
 
@@ -155,8 +153,13 @@ impl Grid {
         self.tiles[food_column][food_row] = Tile::Food;
     }
 
+    fn place_snake(&mut self) {
+        self.snake_coordinate = (1, 1);
+        self.tiles[1][1] = Tile::Snake;
+    }
+
     fn move_player(&mut self, direction: Direction) {
-        let old_coordinate = self.player_coordinate;
+        let old_coordinate = self.snake_coordinate;
 
         let new_coordinate = match direction {
             Direction::Right => (old_coordinate.0, old_coordinate.1 + 1),
@@ -187,11 +190,9 @@ impl Grid {
             _ => {}
         }
 
-        self.player_coordinate = new_coordinate;
+        self.snake_coordinate = new_coordinate;
         self.tiles[old_coordinate.0][old_coordinate.1] = Tile::Empty;
         self.tiles[new_coordinate.0][new_coordinate.1] = Tile::Snake;
-
-        self.print();
 
         writeln!(
             self.stdout,
