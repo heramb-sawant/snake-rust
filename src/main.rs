@@ -1,10 +1,12 @@
 use rand::{thread_rng, Rng};
-use termion::clear;
+use std::thread::sleep;
+use std::time::{Duration, SystemTime};
 use termion::event::Key;
 use termion::input::{Keys, TermRead};
 use termion::raw::{IntoRawMode, RawTerminal};
+use termion::{async_stdin, clear, AsyncReader};
 
-use std::io::{stdin, stdout, Stdin, Stdout, Write};
+use std::io::{stdin, stdout, Read, Stdin, Stdout, Write};
 
 /*
     TODO:
@@ -54,11 +56,11 @@ struct Grid {
     snake_coordinate: (usize, usize),
     score: i16,
     stdout: RawTerminal<Stdout>,
-    stdin: Keys<Stdin>,
+    stdin: AsyncReader,
 }
 
 impl Grid {
-    fn new(columns: usize, rows: usize, stdout: RawTerminal<Stdout>, stdin: Stdin) -> Grid {
+    fn new(columns: usize, rows: usize, stdout: RawTerminal<Stdout>, stdin: AsyncReader) -> Grid {
         let mut empty_grid = vec![vec![Tile::Empty; rows]; columns];
 
         // Add walls
@@ -84,7 +86,7 @@ impl Grid {
             rows,
             score: 0,
             stdout,
-            stdin: stdin.keys(),
+            stdin,
         };
     }
 
@@ -105,8 +107,12 @@ impl Grid {
         )
         .unwrap();
 
+        let mut start_time = SystemTime::now();
+
         loop {
-            let c = self.stdin.next().unwrap().unwrap();
+            let mut buf = [0];
+            self.stdin.read(&mut buf).unwrap();
+
             // Clear the current line.
             write!(
                 self.stdout,
@@ -116,22 +122,29 @@ impl Grid {
             )
             .unwrap();
 
-            match c {
-                // Exit.
-                Key::Char('q') => break,
-                Key::Left => {
+            if let Ok(elapsed) = start_time.elapsed() {
+                if elapsed.as_secs() > 1 {
+                    println!("{}", elapsed.as_secs());
+                    self.move_player(Direction::Right);
+                    start_time = SystemTime::now()
+                }
+            }
+
+            match buf[0] {
+                b'q' => break,
+                b'a' => {
                     println!("<left>");
                     self.move_player(Direction::Left);
                 }
-                Key::Right => {
+                b'd' => {
                     println!("<right>");
                     self.move_player(Direction::Right);
                 }
-                Key::Up => {
+                b'w' => {
                     println!("<up>");
                     self.move_player(Direction::Up);
                 }
-                Key::Down => {
+                b's' => {
                     println!("<down>");
                     self.move_player(Direction::Down);
                 }
@@ -223,7 +236,7 @@ impl Grid {
 fn main() {
     println!("Starting!");
 
-    let stdin = stdin();
+    let stdin = async_stdin();
     let stdout = stdout().into_raw_mode().unwrap();
 
     // TODO: Get grid size from input.

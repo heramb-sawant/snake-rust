@@ -1,2 +1,3 @@
-# maze-runner
+# snake-rust
+
 Escape the maze
