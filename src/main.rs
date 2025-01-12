@@ -22,10 +22,33 @@ use std::io::{stdin, stdout, Read, Stdin, Stdout, Write};
         - See if you can get GH tests pipeline working
 */
 
+struct Snake {
+    body: Vec<(usize, usize)>,
+    direction: Direction,
+}
+
+impl Snake {
+    fn new() -> Snake {
+        Snake {
+            body: vec![(1, 1)],
+            direction: Direction::Right,
+        }
+    }
+
+    // fn get_head(&self) -> (usize, usize) {
+    //     return self.body[0];
+    // }
+
+    // fn increase_length(&mut self, coordinate: (usize, usize)) {
+    //     self.body.push(coordinate);
+    // }
+}
+
 #[derive(Clone)]
 enum Tile {
     Empty,
     Snake,
+    // Body,
     Food,
     Wall,
 }
@@ -35,6 +58,7 @@ impl Tile {
         match self {
             Tile::Empty => ' ',
             Tile::Snake => '⍥',
+            // Tile::Body => '*',
             Tile::Food => 'o',
             Tile::Wall => '|',
         }
@@ -52,8 +76,8 @@ struct Grid {
     tiles: Vec<Vec<Tile>>,
     columns: usize,
     rows: usize,
-    // TODO: move this to the tiles as well. Update this with a player tile once coordinate is on the player
-    snake_coordinate: (usize, usize),
+    snake: Snake,
+    // TODO: Should probably also have a reference to food
     score: i16,
     stdout: RawTerminal<Stdout>,
     stdin: AsyncReader,
@@ -79,10 +103,13 @@ impl Grid {
             i += 1;
         }
 
+        // TODO: Think about moving all snake logic into the snake struct
+        empty_grid[1][1] = Tile::Snake;
+
         return Grid {
             tiles: empty_grid,
             columns,
-            snake_coordinate: (0, 0),
+            snake: Snake::new(),
             rows,
             score: 0,
             stdout,
@@ -93,7 +120,6 @@ impl Grid {
     fn start(&mut self) {
         // Set up game
         self.place_food();
-        self.place_snake();
 
         // TODO: This clears some of the warns I think. Make sure it starts after all the console start output
         write!(self.stdout, "{}", clear::All).unwrap();
@@ -123,9 +149,9 @@ impl Grid {
             .unwrap();
 
             if let Ok(elapsed) = start_time.elapsed() {
-                if elapsed.as_secs() > 1 {
+                if elapsed.as_millis() > 500 {
                     println!("{}", elapsed.as_secs());
-                    self.move_player(Direction::Right);
+                    self.move_snake();
                     start_time = SystemTime::now()
                 }
             }
@@ -134,19 +160,19 @@ impl Grid {
                 b'q' => break,
                 b'a' => {
                     println!("<left>");
-                    self.move_player(Direction::Left);
+                    self.snake.direction = Direction::Left;
                 }
                 b'd' => {
                     println!("<right>");
-                    self.move_player(Direction::Right);
+                    self.snake.direction = Direction::Right;
                 }
                 b'w' => {
                     println!("<up>");
-                    self.move_player(Direction::Up);
+                    self.snake.direction = Direction::Up;
                 }
                 b's' => {
                     println!("<down>");
-                    self.move_player(Direction::Down);
+                    self.snake.direction = Direction::Down;
                 }
                 _ => println!("Invalid Move"),
             }
@@ -166,15 +192,10 @@ impl Grid {
         self.tiles[food_column][food_row] = Tile::Food;
     }
 
-    fn place_snake(&mut self) {
-        self.snake_coordinate = (1, 1);
-        self.tiles[1][1] = Tile::Snake;
-    }
+    fn move_snake(&mut self) {
+        let old_coordinate = self.snake.body[0];
 
-    fn move_player(&mut self, direction: Direction) {
-        let old_coordinate = self.snake_coordinate;
-
-        let new_coordinate = match direction {
+        let new_coordinate = match self.snake.direction {
             Direction::Right => (old_coordinate.0, old_coordinate.1 + 1),
             Direction::Left => (old_coordinate.0, old_coordinate.1 - 1),
             Direction::Up => (old_coordinate.0 - 1, old_coordinate.1),
@@ -203,7 +224,7 @@ impl Grid {
             _ => {}
         }
 
-        self.snake_coordinate = new_coordinate;
+        self.snake.body[0] = new_coordinate;
         self.tiles[old_coordinate.0][old_coordinate.1] = Tile::Empty;
         self.tiles[new_coordinate.0][new_coordinate.1] = Tile::Snake;
 
