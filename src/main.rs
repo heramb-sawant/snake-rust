@@ -35,13 +35,27 @@ impl Snake {
         }
     }
 
-    // fn get_head(&self) -> (usize, usize) {
-    //     return self.body[0];
-    // }
+    fn shift(&mut self) {
+        let snake_head = self.body[0];
 
-    // fn increase_length(&mut self, coordinate: (usize, usize)) {
-    //     self.body.push(coordinate);
-    // }
+        let new_coordinate = match self.direction {
+            Direction::Right => (snake_head.0 + 1, snake_head.1),
+            Direction::Left => (snake_head.0 - 1, snake_head.1),
+            Direction::Up => (snake_head.0, snake_head.1 - 1),
+            Direction::Down => (snake_head.0, snake_head.1 + 1),
+        };
+
+        let i = 1;
+        while i < self.body.len() {
+            self.body[i] = self.body[i - 1]
+        }
+
+        self.body[0] = new_coordinate;
+    }
+
+    fn increase_length(&mut self, coordinate: (u16, u16)) {
+        self.body.push(coordinate);
+    }
 }
 
 const SNAKE_HEAD: char = '⍥';
@@ -74,6 +88,7 @@ impl Grid {
         write!(stdout, "{}", clear::All).unwrap();
 
         // Add walls
+        // TODO: make sure height and with are correct, seems like the termion print only goes to 19
         let mut i: u16 = 1;
         while i <= rows {
             write!(stdout, "{}{}", termion::cursor::Goto(1, i), BORDER).unwrap();
@@ -196,44 +211,53 @@ impl Grid {
 
     fn move_snake(&mut self) {
         let old_coordinate = self.snake.body[0];
+        let old_snake_end = self.snake.body[self.snake.body.len() - 1]; // TODO: Try to use the .first/.end methods instead
 
-        let new_coordinate = match self.snake.direction {
-            Direction::Right => (old_coordinate.0 + 1, old_coordinate.1),
-            Direction::Left => (old_coordinate.0 - 1, old_coordinate.1),
-            Direction::Up => (old_coordinate.0, old_coordinate.1 - 1),
-            Direction::Down => (old_coordinate.0, old_coordinate.1 + 1),
-        };
+        self.snake.shift();
 
-        self.snake.body[0] = new_coordinate;
-        write!(
-            self.stdout,
-            "{}{}",
-            termion::cursor::Goto(new_coordinate.0 + 1, new_coordinate.1 + 1),
-            SNAKE_HEAD
-        )
-        .unwrap();
-        write!(
-            self.stdout,
-            "{}{}",
-            termion::cursor::Goto(old_coordinate.0 + 1, old_coordinate.1 + 1),
-            EMPTY
-        )
-        .unwrap();
+        let i = 0;
+        while i < self.snake.body.len() {
+            let snake_bit = self.snake.body[i];
+            let snake_part = if i == 0 { SNAKE_HEAD } else { SNAKE_BODY };
+            write!(
+                self.stdout,
+                "{}{}",
+                termion::cursor::Goto(snake_bit.0 + 1, snake_bit.1 + 1),
+                snake_part
+            )
+            .unwrap();
+        }
 
-        if new_coordinate == self.food {
+        let snake_head = self.snake.body[0];
+        if snake_head == self.food {
             self.score += 1;
             self.place_food();
+            self.snake.increase_length(old_snake_end);
+            write!(
+                self.stdout,
+                "{}{}",
+                termion::cursor::Goto(old_snake_end.0 + 1, old_snake_end.1 + 1),
+                SNAKE_BODY
+            )
+            .unwrap();
+        } else {
+            write!(
+                self.stdout,
+                "{}{}",
+                termion::cursor::Goto(old_snake_end.0 + 1, old_snake_end.1 + 1),
+                EMPTY
+            )
+            .unwrap();
         }
 
         write!(
             self.stdout,
-            "{}Food: {:?}, Snake: {:?}, Direction: {:?}, Old {:?}, New {:?}, Score {}",
+            "{}Food: {:?}, Snake: {:?}, Direction: {:?}, Old {:?}, Score {}",
             termion::cursor::Goto(0, self.columns + 2),
             self.food,
             self.snake.body[0],
             self.snake.direction,
             old_coordinate,
-            new_coordinate,
             self.score
         )
         .unwrap();
