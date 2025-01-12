@@ -60,7 +60,7 @@ struct Grid {
     columns: u16,
     rows: u16,
     snake: Snake,
-    // TODO: Should probably also have a reference to food
+    food: (u16, u16),
     score: i16,
     stdout: RawTerminal<Stdout>,
     stdin: AsyncReader,
@@ -85,6 +85,7 @@ impl Grid {
             i += 1
         }
 
+        // Snake
         let snake = Snake::new();
         let snake_head = snake.body[0];
         write!(
@@ -95,11 +96,14 @@ impl Grid {
         )
         .unwrap();
 
-        write!(stdout, "{}", termion::cursor::Goto(0, columns + 1)).unwrap();
+        // Food
+        let food = (rows / 2, columns / 2);
+        write!(stdout, "{}{}", termion::cursor::Goto(food.0, food.1), FOOD).unwrap();
 
         return Grid {
             columns,
             snake: Snake::new(),
+            food,
             rows,
             score: 0,
             stdout,
@@ -107,79 +111,82 @@ impl Grid {
         };
     }
 
-    // fn start(&mut self) {
-    //     // Set up game
-    //     self.place_food();
+    fn start(&mut self) {
+        writeln!(
+            self.stdout,
+            "{}Arrow keys to move, q to exit.",
+            termion::cursor::Goto(0, self.columns + 2),
+        )
+        .unwrap();
 
-    //     // TODO: This clears some of the warns I think. Make sure it starts after all the console start output
-    //     write!(self.stdout, "{}", clear::All).unwrap();
+        let mut start_time = SystemTime::now();
 
-    //     self.print();
+        loop {
+            let mut buf = [0];
+            self.stdin.read(&mut buf).unwrap();
 
-    //     writeln!(
-    //         self.stdout,
-    //         "{}Arrow keys to move, q to exit.",
-    //         termion::cursor::Goto(0, 21),
-    //     )
-    //     .unwrap();
+            // Clear the current line.
+            write!(
+                self.stdout,
+                "{}{}",
+                termion::cursor::Goto(0, self.columns + 1),
+                termion::clear::CurrentLine
+            )
+            .unwrap();
 
-    //     let mut start_time = SystemTime::now();
+            if let Ok(elapsed) = start_time.elapsed() {
+                if elapsed.as_millis() > 500 {
+                    // self.move_snake();
+                    start_time = SystemTime::now()
+                }
+            }
 
-    //     loop {
-    //         let mut buf = [0];
-    //         self.stdin.read(&mut buf).unwrap();
+            match buf[0] {
+                b'q' => break,
+                b'a' => {
+                    print!("<left>");
+                    self.snake.direction = Direction::Left;
+                }
+                b'd' => {
+                    print!("<right>");
+                    self.snake.direction = Direction::Right;
+                }
+                b'w' => {
+                    print!("<up>");
+                    self.snake.direction = Direction::Up;
+                }
+                b's' => {
+                    print!("<down>");
+                    self.snake.direction = Direction::Down;
+                }
+                _ => print!("Invalid Move"),
+            }
 
-    //         // Clear the current line.
-    //         write!(
-    //             self.stdout,
-    //             "{}{}",
-    //             termion::cursor::Goto(0, 22),
-    //             termion::clear::CurrentLine
-    //         )
-    //         .unwrap();
+            self.stdout.flush().unwrap();
+        }
 
-    //         if let Ok(elapsed) = start_time.elapsed() {
-    //             if elapsed.as_millis() > 500 {
-    //                 println!("{}", elapsed.as_secs());
-    //                 self.move_snake();
-    //                 start_time = SystemTime::now()
-    //             }
-    //         }
-
-    //         match buf[0] {
-    //             b'q' => break,
-    //             b'a' => {
-    //                 println!("<left>");
-    //                 self.snake.direction = Direction::Left;
-    //             }
-    //             b'd' => {
-    //                 println!("<right>");
-    //                 self.snake.direction = Direction::Right;
-    //             }
-    //             b'w' => {
-    //                 println!("<up>");
-    //                 self.snake.direction = Direction::Up;
-    //             }
-    //             b's' => {
-    //                 println!("<down>");
-    //                 self.snake.direction = Direction::Down;
-    //             }
-    //             _ => println!("Invalid Move"),
-    //         }
-
-    //         self.print();
-    //         self.stdout.flush().unwrap();
-    //     }
-
-    //     // Show the cursor again before we exit.
-    //     write!(self.stdout, "{}", termion::cursor::Show).unwrap();
-    // }
+        // Show the cursor again before we exit.
+        write!(
+            self.stdout,
+            "{}{}",
+            termion::cursor::Goto(0, self.columns + 3),
+            termion::cursor::Show
+        )
+        .unwrap();
+    }
 
     // fn place_food(&mut self) {
-    //     let food_column: usize = thread_rng().gen_range(2..self.columns - 2);
-    //     let food_row: usize = thread_rng().gen_range(2..self.rows - 2);
+    //     let food_column = thread_rng().gen_range(2..self.columns - 2);
+    //     let food_row = thread_rng().gen_range(2..self.rows - 2);
 
-    //     self.tiles[food_column][food_row] = Tile::Food;
+    //     self.food = (food_column, food_row);
+    //     write!(
+    //         self.stdout,
+    //         "{}{}",
+    //         termion::cursor::Goto(food_row, food_column),
+    //         FOOD
+    //     )
+    //     .unwrap();
     // }
 
     // fn move_snake(&mut self) {
@@ -228,20 +235,6 @@ impl Grid {
     //     )
     //     .unwrap();
     // }
-
-    // // TODO: get rid of this mut with pointers or whatever you saw in the tutorial.
-    // fn print(&mut self) {
-    //     // TODO: Update all the tiles to have a coordinate so its easier to reference and print them at a specific position
-    //     let mut i = 1;
-    //     for columns in self.tiles.iter() {
-    //         write!(self.stdout, "{}", termion::cursor::Goto(0, i)).unwrap();
-    //         i += 1;
-    //         for row in columns.iter() {
-    //             write!(self.stdout, "{}", row.get_character()).unwrap()
-    //         }
-    //         writeln!(self.stdout, "").unwrap()
-    //     }
-    // }
 }
 
 fn main() {
@@ -250,9 +243,8 @@ fn main() {
     let stdin = async_stdin();
     let stdout = stdout().into_raw_mode().unwrap();
 
-    // TODO: Get grid size from input.
     let length = 20;
     let mut grid = Grid::new(length, length, stdout, stdin);
 
-    // grid.start();
+    grid.start();
 }
