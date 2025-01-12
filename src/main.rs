@@ -45,6 +45,7 @@ impl Snake {
 }
 
 const SNAKE_HEAD: char = '⍥';
+const EMPTY: char = ' ';
 const SNAKE_BODY: char = 'o';
 const BORDER: char = '|';
 const FOOD: char = '*';
@@ -98,7 +99,13 @@ impl Grid {
 
         // Food
         let food = (rows / 2, columns / 2);
-        write!(stdout, "{}{}", termion::cursor::Goto(food.0, food.1), FOOD).unwrap();
+        write!(
+            stdout,
+            "{}{}",
+            termion::cursor::Goto(food.0 + 1, food.1 + 1),
+            FOOD
+        )
+        .unwrap();
 
         return Grid {
             columns,
@@ -115,7 +122,7 @@ impl Grid {
         writeln!(
             self.stdout,
             "{}Arrow keys to move, q to exit.",
-            termion::cursor::Goto(0, self.columns + 2),
+            termion::cursor::Goto(0, self.columns + 3),
         )
         .unwrap();
 
@@ -135,8 +142,8 @@ impl Grid {
             .unwrap();
 
             if let Ok(elapsed) = start_time.elapsed() {
-                if elapsed.as_millis() > 500 {
-                    // self.move_snake();
+                if elapsed.as_millis() > 1000 {
+                    self.move_snake();
                     start_time = SystemTime::now()
                 }
             }
@@ -169,7 +176,7 @@ impl Grid {
         write!(
             self.stdout,
             "{}{}",
-            termion::cursor::Goto(0, self.columns + 3),
+            termion::cursor::Goto(0, self.columns + 4),
             termion::cursor::Show
         )
         .unwrap();
@@ -189,52 +196,44 @@ impl Grid {
     //     .unwrap();
     // }
 
-    // fn move_snake(&mut self) {
-    //     let old_coordinate = self.snake.body[0];
+    fn move_snake(&mut self) {
+        let old_coordinate = self.snake.body[0];
 
-    //     let new_coordinate = match self.snake.direction {
-    //         Direction::Right => (old_coordinate.0, old_coordinate.1 + 1),
-    //         Direction::Left => (old_coordinate.0, old_coordinate.1 - 1),
-    //         Direction::Up => (old_coordinate.0 - 1, old_coordinate.1),
-    //         Direction::Down => (old_coordinate.0 + 1, old_coordinate.1),
-    //     };
+        let new_coordinate = match self.snake.direction {
+            Direction::Right => (old_coordinate.0 + 1, old_coordinate.1),
+            Direction::Left => (old_coordinate.0 - 1, old_coordinate.1),
+            Direction::Up => (old_coordinate.0, old_coordinate.1 - 1),
+            Direction::Down => (old_coordinate.0, old_coordinate.1 + 1),
+        };
 
-    //     print!(
-    //         "Tile: {},{},{}.",
-    //         new_coordinate.0,
-    //         new_coordinate.1,
-    //         self.tiles[new_coordinate.0][new_coordinate.1].get_character()
-    //     );
+        self.snake.body[0] = new_coordinate;
+        write!(
+            self.stdout,
+            "{}{}",
+            termion::cursor::Goto(new_coordinate.0 + 1, new_coordinate.1 + 1),
+            SNAKE_HEAD
+        )
+        .unwrap();
+        write!(
+            self.stdout,
+            "{}{}",
+            termion::cursor::Goto(old_coordinate.0 + 1, old_coordinate.1 + 1),
+            EMPTY
+        )
+        .unwrap();
 
-    //     print!(
-    //         "Tile: {},{},{}.",
-    //         old_coordinate.0,
-    //         old_coordinate.1,
-    //         self.tiles[old_coordinate.0][old_coordinate.1].get_character()
-    //     );
-
-    //     match self.tiles[new_coordinate.0][new_coordinate.1] {
-    //         Tile::Food => {
-    //             self.score += 1;
-    //             self.place_food()
-    //         }
-    //         _ => {}
-    //     }
-
-    //     self.snake.body[0] = new_coordinate;
-    //     self.tiles[old_coordinate.0][old_coordinate.1] = Tile::Empty;
-    //     self.tiles[new_coordinate.0][new_coordinate.1] = Tile::Snake;
-
-    //     writeln!(
-    //         self.stdout,
-    //         "{}Old {:?}, New {:?}, Score {}",
-    //         termion::cursor::Goto(0, 24),
-    //         old_coordinate,
-    //         new_coordinate,
-    //         self.score
-    //     )
-    //     .unwrap();
-    // }
+        writeln!(
+            self.stdout,
+            "{}Food: {:?}, Snake: {:?}, Old {:?}, New {:?}, Score {}",
+            termion::cursor::Goto(0, self.columns + 2),
+            self.food,
+            self.snake.body[0],
+            old_coordinate,
+            new_coordinate,
+            self.score
+        )
+        .unwrap();
+    }
 }
 
 fn main() {
