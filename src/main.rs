@@ -50,6 +50,7 @@ const SNAKE_BODY: char = 'o';
 const BORDER: char = '|';
 const FOOD: char = '*';
 
+#[derive(Debug)]
 pub enum Direction {
     Up,
     Down,
@@ -65,6 +66,7 @@ struct Grid {
     score: i16,
     stdout: RawTerminal<Stdout>,
     stdin: AsyncReader,
+    // TODO: Add speed
 }
 
 impl Grid {
@@ -142,7 +144,7 @@ impl Grid {
             .unwrap();
 
             if let Ok(elapsed) = start_time.elapsed() {
-                if elapsed.as_millis() > 1000 {
+                if elapsed.as_millis() > 500 {
                     self.move_snake();
                     start_time = SystemTime::now()
                 }
@@ -151,22 +153,18 @@ impl Grid {
             match buf[0] {
                 b'q' => break,
                 b'a' => {
-                    print!("<left>");
                     self.snake.direction = Direction::Left;
                 }
                 b'd' => {
-                    print!("<right>");
                     self.snake.direction = Direction::Right;
                 }
                 b'w' => {
-                    print!("<up>");
                     self.snake.direction = Direction::Up;
                 }
                 b's' => {
-                    print!("<down>");
                     self.snake.direction = Direction::Down;
                 }
-                _ => print!("Invalid Move"),
+                _ => {}
             }
 
             self.stdout.flush().unwrap();
@@ -182,19 +180,19 @@ impl Grid {
         .unwrap();
     }
 
-    // fn place_food(&mut self) {
-    //     let food_column = thread_rng().gen_range(2..self.columns - 2);
-    //     let food_row = thread_rng().gen_range(2..self.rows - 2);
+    fn place_food(&mut self) {
+        let food_column = thread_rng().gen_range(2..self.columns - 1);
+        let food_row = thread_rng().gen_range(2..self.rows - 1);
 
-    //     self.food = (food_column, food_row);
-    //     write!(
-    //         self.stdout,
-    //         "{}{}",
-    //         termion::cursor::Goto(food_row, food_column),
-    //         FOOD
-    //     )
-    //     .unwrap();
-    // }
+        self.food = (food_column, food_row);
+        write!(
+            self.stdout,
+            "{}{}",
+            termion::cursor::Goto(food_row + 1, food_column + 1),
+            FOOD
+        )
+        .unwrap();
+    }
 
     fn move_snake(&mut self) {
         let old_coordinate = self.snake.body[0];
@@ -222,12 +220,18 @@ impl Grid {
         )
         .unwrap();
 
-        writeln!(
+        if new_coordinate == self.food {
+            self.score += 1;
+            self.place_food();
+        }
+
+        write!(
             self.stdout,
-            "{}Food: {:?}, Snake: {:?}, Old {:?}, New {:?}, Score {}",
+            "{}Food: {:?}, Snake: {:?}, Direction: {:?}, Old {:?}, New {:?}, Score {}",
             termion::cursor::Goto(0, self.columns + 2),
             self.food,
             self.snake.body[0],
+            self.snake.direction,
             old_coordinate,
             new_coordinate,
             self.score
