@@ -11,7 +11,6 @@ use std::io::{stdin, stdout, Read, Stdin, Stdout, Write};
 /*
     TODO:
         - Snake loses if it hits a border
-        - Snake increases in size everytime you get food
         - Speed increases
         - Food animation
         - Start and end screen
@@ -43,11 +42,8 @@ impl Snake {
             Direction::Down => (snake_head.0, snake_head.1 + 1),
         };
 
-        let mut i = 1;
-        while i < self.body.len() {
+        for i in (1..self.body.len()).rev() {
             self.body[i] = self.body[i - 1];
-
-            i += 1;
         }
 
         self.body[0] = new_coordinate;
@@ -64,7 +60,7 @@ const SNAKE_BODY: char = 'o';
 const BORDER: char = '|';
 const FOOD: char = '*';
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Direction {
     Up,
     Down,
@@ -199,7 +195,7 @@ impl Grid {
         let food_column = thread_rng().gen_range(2..self.columns - 1);
         let food_row = thread_rng().gen_range(2..self.rows - 1);
 
-        self.food = (food_column, food_row);
+        self.food = (food_row, food_column);
         write!(
             self.stdout,
             "{}{}",
@@ -217,7 +213,7 @@ impl Grid {
         )
         .unwrap();
 
-        let old_snake_end = self.snake.body[self.snake.body.len() - 1]; // TODO: Try to use the .first/.end methods instead
+        let old_snake_tail = self.snake.body[self.snake.body.len() - 1]; // TODO: Try to use the .first/.end methods instead
 
         self.snake.shift();
 
@@ -240,11 +236,11 @@ impl Grid {
         if snake_head == self.food {
             self.score += 1;
             self.place_food();
-            self.snake.increase_length(old_snake_end);
+            self.snake.increase_length(old_snake_tail);
             write!(
                 self.stdout,
                 "{}{}",
-                termion::cursor::Goto(old_snake_end.0 + 1, old_snake_end.1 + 1),
+                termion::cursor::Goto(old_snake_tail.0 + 1, old_snake_tail.1 + 1),
                 SNAKE_BODY
             )
             .unwrap();
@@ -252,7 +248,7 @@ impl Grid {
             write!(
                 self.stdout,
                 "{}{}",
-                termion::cursor::Goto(old_snake_end.0 + 1, old_snake_end.1 + 1),
+                termion::cursor::Goto(old_snake_tail.0 + 1, old_snake_tail.1 + 1),
                 EMPTY
             )
             .unwrap();
@@ -282,4 +278,66 @@ fn main() {
     let mut grid = Grid::new(length, length, stdout, stdin);
 
     grid.start();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Direction, Snake};
+
+    #[test]
+    fn snake_new() {
+        let snake = Snake::new();
+
+        assert_eq!(snake.body.len(), 1);
+        assert_eq!(snake.body[0], (1, 1));
+    }
+
+    #[test]
+    fn snake_increase_length() {
+        let mut snake = Snake::new();
+
+        snake.increase_length((1, 2));
+
+        assert_eq!(snake.body.len(), 2);
+        assert_eq!(snake.body[0], (1, 1));
+        assert_eq!(snake.body[1], (1, 2));
+    }
+
+    #[test]
+    fn snake_shift_small() {
+        let mut snake = Snake::new();
+
+        snake.increase_length((1, 2));
+
+        println!("{:?}", snake.body);
+
+        snake.shift();
+
+        println!("{:?}", snake.body);
+
+        assert_eq!(snake.body.len(), 2);
+        assert_eq!(snake.direction, Direction::Right);
+        assert_eq!(snake.body[0], (2, 1));
+        assert_eq!(snake.body[1], (1, 1));
+    }
+
+    #[test]
+    fn snake_shift_long() {
+        let mut snake = Snake::new();
+
+        snake.increase_length((1, 2));
+        snake.increase_length((1, 3));
+        snake.increase_length((1, 4));
+
+        snake.shift();
+
+        print!("{:?}", snake.body);
+
+        assert_eq!(snake.body.len(), 4);
+        assert_eq!(snake.direction, Direction::Right);
+        assert_eq!(snake.body[0], (2, 1));
+        assert_eq!(snake.body[1], (1, 1));
+        assert_eq!(snake.body[2], (1, 2));
+        assert_eq!(snake.body[3], (1, 3));
+    }
 }
