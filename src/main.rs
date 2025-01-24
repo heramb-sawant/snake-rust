@@ -164,16 +164,24 @@ impl Grid {
             match buf[0] {
                 b'q' => break,
                 b'a' => {
-                    self.snake.direction = Direction::Left;
+                    if self.snake.direction != Direction::Right {
+                        self.snake.direction = Direction::Left;
+                    }
                 }
                 b'd' => {
-                    self.snake.direction = Direction::Right;
+                    if self.snake.direction != Direction::Left {
+                        self.snake.direction = Direction::Right;
+                    }
                 }
                 b'w' => {
-                    self.snake.direction = Direction::Up;
+                    if self.snake.direction != Direction::Down {
+                        self.snake.direction = Direction::Up;
+                    }
                 }
                 b's' => {
-                    self.snake.direction = Direction::Down;
+                    if self.snake.direction != Direction::Up {
+                        self.snake.direction = Direction::Down;
+                    }
                 }
                 _ => {}
             }
