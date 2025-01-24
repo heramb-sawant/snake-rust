@@ -10,8 +10,6 @@ use std::io::{stdin, stdout, Read, Stdin, Stdout, Write};
 
 /*
     TODO:
-        - Print the individual pieces once the board works as intended
-        - Snake moves on its own
         - Snake loses if it hits a border
         - Snake increases in size everytime you get food
         - Speed increases
@@ -45,9 +43,11 @@ impl Snake {
             Direction::Down => (snake_head.0, snake_head.1 + 1),
         };
 
-        let i = 1;
+        let mut i = 1;
         while i < self.body.len() {
-            self.body[i] = self.body[i - 1]
+            self.body[i] = self.body[i - 1];
+
+            i += 1;
         }
 
         self.body[0] = new_coordinate;
@@ -159,7 +159,7 @@ impl Grid {
             .unwrap();
 
             if let Ok(elapsed) = start_time.elapsed() {
-                if elapsed.as_millis() > 500 {
+                if elapsed.as_millis() > 300 {
                     self.move_snake();
                     start_time = SystemTime::now()
                 }
@@ -210,12 +210,18 @@ impl Grid {
     }
 
     fn move_snake(&mut self) {
-        let old_coordinate = self.snake.body[0];
+        write!(
+            self.stdout,
+            "{}Moving",
+            termion::cursor::Goto(0, self.columns + 1),
+        )
+        .unwrap();
+
         let old_snake_end = self.snake.body[self.snake.body.len() - 1]; // TODO: Try to use the .first/.end methods instead
 
         self.snake.shift();
 
-        let i = 0;
+        let mut i = 0;
         while i < self.snake.body.len() {
             let snake_bit = self.snake.body[i];
             let snake_part = if i == 0 { SNAKE_HEAD } else { SNAKE_BODY };
@@ -226,6 +232,8 @@ impl Grid {
                 snake_part
             )
             .unwrap();
+
+            i += 1;
         }
 
         let snake_head = self.snake.body[0];
@@ -252,12 +260,12 @@ impl Grid {
 
         write!(
             self.stdout,
-            "{}Food: {:?}, Snake: {:?}, Direction: {:?}, Old {:?}, Score {}",
+            "{}Food: {:?}, Snake: {:?}, Direction: {:?}, Length {:?}, Score {}",
             termion::cursor::Goto(0, self.columns + 2),
             self.food,
             self.snake.body[0],
             self.snake.direction,
-            old_coordinate,
+            self.snake.body,
             self.score
         )
         .unwrap();
